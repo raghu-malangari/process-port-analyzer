@@ -8,27 +8,27 @@ param(
 
 Write-Host "Starting Script..." -ForegroundColor Green
 
-#get network conections with process
+#get network conections and filter for listen
 $connections = Get-NetTCPConnection | Where-Object { $_.State -eq 'Listen' -or $_.State -eq 'Established' }
 
-#arrays for different ports
+#arrays for each port range
 $ports0to1000 = @()
 $ports1000to10000 = @()
 $ports10000to20000 = @()
 $ports20000AndAbove = @()
 
-#process each connection
+#get process info
 foreach ($conn in $connections) {
-    $processId = $conn.OwningProcess
+    $pId = $conn.OwningProcess
     $localPort = $conn.LocalPort
     
     try {
-        $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
+        $process = Get-Process -Id $pId -ErrorAction SilentlyContinue
         $processName = if ($process) { $process.ProcessName } else { "Unknown" }
         
         $entry = [PSCustomObject]@{
             ProcessName = $processName
-            PID = $processId
+            PID = $pId
         }
         
         #categorize the port range
@@ -46,7 +46,7 @@ foreach ($conn in $connections) {
         }
     }
     catch {
-        Write-Warning "Could not get process info for PID: $processId"
+        Write-Warning "Could not get process info for PID: $pId"
     }
 }
 
@@ -56,17 +56,17 @@ $ports1000to10000 = $ports1000to10000 | Sort-Object ProcessName, PID -Unique
 $ports10000to20000 = $ports10000to20000 | Sort-Object ProcessName, PID -Unique
 $ports20000AndAbove = $ports20000AndAbove | Sort-Object ProcessName, PID -Unique
 
-#create csv files
+#save results into csv files
 $ports0to1000 | Export-Csv -Path "1000.csv" -NoTypeInformation
 $ports1000to10000 | Export-Csv -Path "10000.csv" -NoTypeInformation
 $ports10000to20000 | Export-Csv -Path "20000.csv" -NoTypeInformation
 $ports20000AndAbove | Export-Csv -Path "20000AndAbove.csv" -NoTypeInformation
 
 Write-Host "CSV files created successfully:" -ForegroundColor Green
-Write-Host "- 1000.csv: $($ports0to1000.Count) unique entries"
-Write-Host "- 10000.csv: $($ports1000to10000.Count) unique entries"
-Write-Host "- 20000.csv: $($ports10000to20000.Count) unique entries"
-Write-Host "- 20000AndAbove.csv: $($ports20000AndAbove.Count) unique entries"
+Write-Host "- 1000.csv: $($ports0to1000.Count) entries"
+Write-Host "- 10000.csv: $($ports1000to10000.Count) entries"
+Write-Host "- 20000.csv: $($ports10000to20000.Count) entries"
+Write-Host "- 20000AndAbove.csv: $($ports20000AndAbove.Count) entries"
 
 #email functionality
 if ($SendEmail) {
@@ -99,4 +99,4 @@ if ($SendEmail) {
     Write-Host "Email sending skipped.use -SendEmail switch to enable email functionali." -ForegroundColor Yellow
 }
 
-Write-Host "Process completed!!!!!!!" -ForegroundColor Green
+Write-Host "Script completed!!!!!!!" -ForegroundColor Green
